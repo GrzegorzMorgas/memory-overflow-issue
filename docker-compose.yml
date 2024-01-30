@@ -1,0 +1,73 @@
+version: "3.7"
+services:
+    nginx:
+        image: nginx:alpine
+        container_name: fresh-nginx
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "80:8080"
+        depends_on:
+            - php
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx:/etc/nginx/conf.d/
+        networks:
+            - fresh
+    php:
+        build:
+            args:
+                user: fresh
+                uid: 1001
+            context: ./docker
+            dockerfile: Dockerfile
+        container_name: fresh-app
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+            - ./docker/php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+            - ./docker/php/conf.d/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini
+        depends_on:
+            - db
+        networks:
+            - fresh
+    db:
+        image: mariadb:10.3.27-focal
+        volumes:
+            - db:/var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: sqlpw
+            MYSQL_DATABASE: fresh
+            TZ: "Europe/Zurich"
+        ports:
+            - "3306:3306"
+        networks:
+            - fresh
+    phpmyadmin:
+        build:
+            context: docker/phpmyadmin
+        image: fresh/phpmyadmin
+        ports:
+            - "8080:80"
+        depends_on:
+            - db
+        environment:
+            PMA_HOST: db
+            PMA_PORT: 3306
+            PMA_USER: root
+            PMA_DB: fresh
+            PMA_PASSWORD: sqlpw
+        networks:
+            - fresh
+    redis:
+        build:
+            context: docker/redis
+        image: fresh/redis
+        networks:
+            - fresh
+networks:
+    fresh:
+        driver: bridge
+volumes:
+    db:

@@ -14,5 +14,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
+    dispatch(new \App\Jobs\MemoryOverflowJob());
     return view('welcome');
 });
